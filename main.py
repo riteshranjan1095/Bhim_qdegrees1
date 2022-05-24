@@ -1,0 +1,193 @@
+
+
+import streamlit as st
+
+import pandas as pd
+import numpy as np
+
+import nltk
+nltk.download('punkt')
+from nltk.corpus import stopwords
+import string
+from nltk import PorterStemmer
+from io import BytesIO
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+# nltk.download('vader_lexicon')
+
+
+
+ps =PorterStemmer()
+Senti = SentimentIntensityAnalyzer()
+
+def sentiment_cal(text):
+    sentence =text
+
+    dic = Senti.polarity_scores(sentence)
+    if dic['compound']>0:
+        return 'Postive'
+    elif dic['compound']<0:
+        return 'Negative'
+    else :
+        return 'Neutral'
+
+
+from Bhim_keywords_based_code import dotask
+from Quadrant import quad
+def to_excel(df):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False, sheet_name='Sheet1')
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    format1 = workbook.add_format({'num_format': '0.00'})
+    worksheet.set_column('A:A', None, format1)
+    writer.save()
+    processed_data = output.getvalue()
+    return processed_data
+
+# transformed function . It is used to clean free text. apply lemmatization, stemming
+
+
+def transform_text(text):
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        if i not in stopwords.words('english') and i not in string.punctuation:
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        y.append(ps.stem(i))
+
+    return " ".join(y)
+
+
+
+
+# importing pickle file for model based approach
+# tfidf = pickle.load(open('vectorizer_new.pkl','rb'))
+# model_new = pickle.load(open('model_new.pkl','rb'))
+st.title('Bhim Text Categorization')
+st.header("Upload excel sheet with Columns 'Remarks' and 'Rating'")
+
+
+# st.button('Upload excel/csv file')
+# uploaded_file = st.file_uploader("Choose a file")
+# df1 =pd.DataFrame({})
+#
+# if uploaded_file is not None:
+#     df =pd.read_excel(uploaded_file)
+#     df_ = df.astype(str)
+#     df1.append(df_)
+#     st.write(df_)
+# else:
+#     pass
+#
+# st.write(df1)
+uploaded_file = st.file_uploader("Choose a file")
+df =pd.read_excel(uploaded_file)
+df= df.astype(str)
+col = ['mobile','zone','city','state','Rating','Remarks','Cleaned_Remarks','Categories','Sub Categories','NPS CAT','Total Nps Score']
+df_final =pd.DataFrame(columns=col)
+
+
+# st.write(df)
+
+
+
+# if st.button('transformed_data'):
+#     df['transformed_text']=df['Remarks'].apply(transform_text)
+#     df['transformed_text']=df['transformed_text'].replace('',np.NaN)
+#     df.dropna(subset =['transformed_text'],how ='any',inplace=True)
+#     st.write(df)
+#
+# else:
+#     pass
+
+# if st.button('Sentiment'):
+#     df['Remarks']=df['Remarks'].astype(str)
+#     df['Sentiment']  =df['Remarks'].apply(sentiment_cal)
+#     # df['transformed_text']=df['Remarks'].apply(transform_text)
+#     # df['transformed_text']=df['transformed_text'].replace('',np.NaN)
+#     # df.dropna(subset =['transformed_text'],how ='any',inplace=True)
+#     st.write(df)
+
+# else:
+#     pass
+
+if st.button('CATEGORIZATION,Sentiment and NPS score Categorywise'):
+    a = dotask(df)
+    a['Sentiment']=a['Cleaned_Remarks'].apply(sentiment_cal)
+    df_xlsx = to_excel(a)
+    st.download_button(
+        label="Download data as CSV",
+        data=df_xlsx,
+        file_name='large_df.csv',
+        mime='text/csv',
+    )
+    # st.write(a)
+    # st.write(dotask(df))
+    # df_final.append(dotask(df))
+    # st.download_button()
+
+elif st.button('NPS graph data'):
+    a = dotask(df)
+    b = quad(a)
+    df_xlsx1 = to_excel(b)
+    st.download_button(
+        label="Download excel sheet for Quadrant graph",
+        data=df_xlsx1,
+        file_name='Quadrant graph.csv',
+        mime='text/csv',
+    )
+
+
+
+#
+# df_xlsx = to_excel(a)
+#
+# st.download_button(
+#     label="Download data as CSV",
+#     data=df_xlsx,
+#     file_name='large_df.csv',
+#     mime='text/csv',
+# )
+# if st.button('Data of NPS Quadrant graph'):
+#     b =quad(a)
+#     st.write(b)
+#
+# else:
+#     pass
+# df_xlsx1 = to_excel(b)
+#
+# st.download_button(
+#     label="Download excel sheet for Quadrant graph",
+#     data=df_xlsx1,
+#     file_name='Quadrant graph.csv',
+#     mime='text/csv',
+# )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
